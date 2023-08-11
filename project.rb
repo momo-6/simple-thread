@@ -1,4 +1,9 @@
+require 'date'
+
+
 class Project
+
+  attr_reader :start_date, :end_date
 
   # we may want to persist this in a DB, so separate it from price so we can 
   #  1. change the prices dynamically in the future, and
@@ -11,9 +16,9 @@ class Project
   DAY_TYPE = {
     travel: 0,        # a day of travel only, no work
     full: 1,          # a full work day
-    before_travel: 2, # day is neither travel nor full, but is before a travel day for a given project
-    after_travel: 3,  # day is neither travel nor full, but is after a travel day for a given project
-    outside: 4,       # not a travel, work, or adjacent day; well outside the scheduled project days
+    before_travel: 2, # exactly one day before a travel day for this project
+    after_travel: 3,  # exactly one day after a travel day for this project
+    outside: 4,       # a day well outside the date range for this project ( more than one day before start or after end )
   }
 
   def initialize(fields_map)
@@ -29,5 +34,17 @@ class Project
       DAY_TYPE[:full] => {CITY_COST_TYPE[:low] => 75.00, CITY_COST_TYPE[:high] => 85.00},
     }
     
+  end
+
+  def day_type(date)
+    start_date_delta = (date - @start_date).to_i
+    end_date_delta = (date - @end_date).to_i
+    return DAY_TYPE[:before_travel] if start_date_delta == -1
+    return DAY_TYPE[:travel] if start_date_delta == 0 || end_date_delta == 0
+    return DAY_TYPE[:full] if start_date_delta > 0 && end_date_delta < 0
+    return DAY_TYPE[:after_travel] if end_date_delta == 1
+
+    # else the date is well outside the project date range
+    DAY_TYPE[:outside]
   end
 end
